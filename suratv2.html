@@ -1,0 +1,878 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>RonzzSurat - Sistem Pengiriman Surat</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Inter', sans-serif; background-color: #f8fafc; }
+        .fade-in { animation: fadeIn 0.4s ease-out forwards; }
+        .slide-up { animation: slideUp 0.4s ease-out forwards; }
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+        @keyframes slideUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+        .drag-active { border-color: #4f46e5 !important; background-color: #eef2ff !important; }
+        .loader { border-top-color: transparent; animation: spinner 0.8s linear infinite; }
+        @keyframes spinner { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+        
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar { width: 8px; height: 8px; }
+        ::-webkit-scrollbar-track { background: #f1f1f1; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+    </style>
+</head>
+<body class="text-gray-800 overflow-x-hidden">
+
+    <!-- Navbar -->
+    <nav class="bg-white border-b border-gray-200 sticky top-0 z-40 shadow-sm">
+        <div class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex justify-between h-16 items-center">
+                <!-- Logika Login Rahasia di Title -->
+                <div class="flex items-center gap-2 cursor-pointer select-none" onclick="handleSecretClick()">
+                    <div class="w-10 h-10 bg-indigo-600 rounded-xl flex items-center justify-center text-white shadow-md">
+                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"></path></svg>
+                    </div>
+                    <span class="text-xl font-bold text-gray-900 tracking-tight">RonzzSurat</span>
+                </div>
+                <div class="flex items-center gap-4">
+                    <span id="navAdminTitle" class="font-semibold text-gray-700 hidden">Dashboard Admin</span>
+                    <button id="btnLogout" onclick="logoutAdmin()" class="hidden px-4 py-2 text-sm font-medium text-red-600 hover:bg-red-50 rounded-lg transition-colors">Logout</button>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Main Content Area -->
+    <main class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8" id="mainContainer">
+        
+        <!-- PAGE 1: FORM PUBLIK (Pengirim) -->
+        <div id="publicForm" class="max-w-2xl mx-auto slide-up">
+            <div class="text-center mb-8 relative">
+                <h1 class="text-3xl font-extrabold text-gray-900 mb-2">Kirim Surat Elektronik</h1>
+                <p class="text-gray-500">Isi formulir di bawah untuk mengirim surat atau dokumen secara resmi.</p>
+            </div>
+
+            <div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 sm:p-8">
+                <form id="formKirimSurat" onsubmit="handleKirimSurat(event)">
+                    <div class="space-y-5">
+                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-5">
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">Nama Lengkap <span class="text-red-500">*</span></label>
+                                <input type="text" id="inputNama" required class="w-full px-4 py-2.5 rounded-xl border border-gray-300 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-shadow outline-none" placeholder="Contoh: Budi Santoso">
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">Email Anda <span class="text-red-500">*</span></label>
+                                <div class="relative">
+                                    <input type="email" id="inputEmail" required class="w-full px-4 py-2.5 rounded-xl border border-gray-300 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-shadow outline-none pr-10" placeholder="budi@gmail.com" oninput="debounceEmailCheck()">
+                                    <div id="emailCheckIcon" class="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none"></div>
+                                </div>
+                                <p id="emailHelpText" class="text-xs text-gray-500 mt-1 transition-colors duration-300">Balasan dari admin akan dikirimkan ke email ini.</p>
+                            </div>
+                        </div>
+
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Subjek Surat <span class="text-red-500">*</span></label>
+                            <input type="text" id="inputSubjek" required class="w-full px-4 py-2.5 rounded-xl border border-gray-300 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-shadow outline-none" placeholder="Contoh: Laporan Keuangan Bulan Mei">
+                        </div>
+
+                        <!-- Baris Sosial Media (Opsional) -->
+                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-5">
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">Instagram <span class="text-xs text-gray-400 font-normal">(Opsional)</span></label>
+                                <div class="relative">
+                                    <span class="absolute inset-y-0 left-0 pl-4 flex items-center text-gray-500 font-medium">@</span>
+                                    <input type="text" id="inputInstagram" class="w-full pl-9 pr-4 py-2.5 rounded-xl border border-gray-300 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-shadow outline-none" placeholder="username_ig">
+                                </div>
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">TikTok <span class="text-xs text-gray-400 font-normal">(Opsional)</span></label>
+                                <div class="relative">
+                                    <span class="absolute inset-y-0 left-0 pl-4 flex items-center text-gray-500 font-medium">@</span>
+                                    <input type="text" id="inputTiktok" class="w-full pl-9 pr-4 py-2.5 rounded-xl border border-gray-300 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-shadow outline-none" placeholder="username_tiktok">
+                                </div>
+                            </div>
+                        </div>
+
+                        <div>
+                            <div class="flex justify-between items-end mb-1">
+                                <label class="block text-sm font-medium text-gray-700">Pesan / Isi Surat</label>
+                                <button type="button" onclick="rapikanDenganAI()" class="text-xs font-semibold text-purple-600 hover:text-purple-700 flex items-center gap-1 bg-purple-50 px-2 py-1 rounded-md transition-colors">
+                                    <span>✨ Rapikan dengan AI</span>
+                                </button>
+                            </div>
+                            <textarea id="inputPesan" rows="4" class="w-full px-4 py-2.5 rounded-xl border border-gray-300 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-shadow outline-none resize-y" placeholder="Ketik isi surat Anda di sini, atau tuliskan poin-poin singkat lalu klik 'Rapikan dengan AI'..."></textarea>
+                        </div>
+
+                        <!-- Drag & Drop File Upload -->
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Lampirkan Dokumen (Opsional)</label>
+                            <div id="dropZone" class="border-2 border-dashed border-gray-300 rounded-xl p-6 text-center hover:bg-gray-50 transition-colors cursor-pointer relative" onclick="document.getElementById('inputFile').click()">
+                                <input type="file" id="inputFile" class="hidden" accept=".pdf,.doc,.docx,.xls,.xlsx,.txt" onchange="handleFileSelect(event)">
+                                
+                                <div id="uploadPlaceholder">
+                                    <svg class="mx-auto h-10 w-10 text-gray-400 mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"></path></svg>
+                                    <p class="text-sm text-gray-600 font-medium">Klik untuk unggah atau seret dokumen ke sini</p>
+                                    <p class="text-xs text-gray-500 mt-1">Hanya file PDF, Word, Excel, atau TXT (Max 5MB)</p>
+                                </div>
+
+                                <div id="filePreview" class="hidden flex items-center justify-between bg-indigo-50 p-3 rounded-lg border border-indigo-100" onclick="event.stopPropagation()">
+                                    <div class="flex items-center gap-3 overflow-hidden">
+                                        <svg class="w-8 h-8 text-indigo-500 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M4 4a2 2 0 012-2h4.586A2 2 0 0112 2.586L15.414 6A2 2 0 0116 7.414V16a2 2 0 01-2 2H6a2 2 0 01-2-2V4zm2 6a1 1 0 011-1h6a1 1 0 110 2H7a1 1 0 01-1-1zm1 3a1 1 0 100 2h6a1 1 0 110 2H7a1 1 0 01-1-1zm1 3a1 1 0 100 2h6a1 1 0 100-2H7z" clip-rule="evenodd"></path></svg>
+                                        <div class="text-left truncate">
+                                            <p id="fileNameDisplay" class="text-sm font-semibold text-gray-800 truncate">nama_file.pdf</p>
+                                            <p id="fileSizeDisplay" class="text-xs text-gray-500">0 KB</p>
+                                        </div>
+                                    </div>
+                                    <button type="button" onclick="removeFile(event)" class="text-gray-400 hover:text-red-500 p-1 transition-colors">
+                                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+                                    </button>
+                                </div>
+                            </div>
+                            <p id="fileErrorMsg" class="text-xs text-red-500 mt-1 hidden">Format file tidak didukung! Mohon unggah dokumen.</p>
+                        </div>
+
+                        <button type="submit" id="btnSubmit" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-3 px-4 rounded-xl shadow-md transition-all flex justify-center items-center gap-2">
+                            <span id="btnSubmitText">Kirim Surat Sekarang</span>
+                            <div id="btnSubmitLoader" class="hidden w-5 h-5 border-2 border-white rounded-full loader"></div>
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <!-- PAGE 2: LOGIN ADMIN (2-STEP) -->
+        <div id="loginForm" class="hidden max-w-md mx-auto mt-10 slide-up">
+            <div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-8 text-center overflow-hidden relative">
+                
+                <div class="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                    <svg class="w-8 h-8 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"></path></svg>
+                </div>
+                <h2 class="text-2xl font-bold text-gray-900 mb-2">Akses Admin</h2>
+                
+                <!-- STEP 1: Username & Password -->
+                <form id="formLoginStep1" onsubmit="handleLoginStep1(event)" class="fade-in block">
+                    <p class="text-sm text-gray-500 mb-6">Masukkan kredensial Anda. <br><span class="text-xs">(Simulasi -> User: admin | Pass: admin123)</span></p>
+                    
+                    <div class="space-y-3 mb-2 text-left">
+                        <div>
+                            <input type="text" id="inputUsername" required class="w-full px-4 py-3 rounded-xl border border-gray-300 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-all" placeholder="Username">
+                        </div>
+                        <div>
+                            <input type="password" id="inputPassword" required class="w-full px-4 py-3 rounded-xl border border-gray-300 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-all" placeholder="Password">
+                        </div>
+                    </div>
+                    
+                    <!-- Lupa Password Link -->
+                    <div class="text-right mb-4">
+                        <button type="button" onclick="lupaKredensial('password')" class="text-xs text-indigo-600 hover:text-indigo-800 font-medium transition-colors">Lupa Password?</button>
+                    </div>
+
+                    <p id="errorStep1" class="text-red-500 text-sm mb-4 hidden">Username atau Password salah!</p>
+                    <button type="submit" class="w-full bg-gray-900 hover:bg-gray-800 text-white font-semibold py-3 px-4 rounded-xl shadow-md transition-all">Lanjut Verifikasi</button>
+                    <button type="button" onclick="showPage('publicForm')" class="w-full mt-3 text-gray-500 hover:text-gray-700 text-sm font-medium py-2">Batal & Kembali</button>
+                </form>
+
+                <!-- STEP 2: PIN Keamanan -->
+                <form id="formLoginStep2" onsubmit="handleLoginStep2(event)" class="fade-in hidden">
+                    <p class="text-sm text-gray-500 mb-6">Verifikasi 2 Langkah. Masukkan PIN Anda. <br><span class="text-xs">(Simulasi PIN: 1234)</span></p>
+                    
+                    <input type="password" id="inputPin" required class="w-full px-4 py-3 text-center tracking-widest text-2xl rounded-xl border border-gray-300 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none mb-2" placeholder="••••">
+                    
+                    <!-- Lupa PIN Link -->
+                    <div class="text-right mb-4">
+                        <button type="button" onclick="lupaKredensial('pin')" class="text-xs text-indigo-600 hover:text-indigo-800 font-medium transition-colors">Lupa PIN Keamanan?</button>
+                    </div>
+
+                    <p id="errorStep2" class="text-red-500 text-sm mb-4 hidden">PIN Keamanan salah!</p>
+                    <button type="submit" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-3 px-4 rounded-xl shadow-md transition-all">Masuk Dashboard</button>
+                    <button type="button" onclick="backToLoginStep1()" class="w-full mt-3 text-gray-500 hover:text-gray-700 text-sm font-medium py-2">Kembali</button>
+                </form>
+
+            </div>
+        </div>
+
+        <!-- PAGE 3: DASHBOARD ADMIN -->
+        <div id="adminDashboard" class="hidden slide-up">
+            <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 gap-4">
+                <div>
+                    <h2 class="text-2xl font-bold text-gray-900">Surat Masuk</h2>
+                    <p class="text-sm text-gray-500">Kelola dan balas surat dari pengguna.</p>
+                </div>
+                <button onclick="refreshAdminData()" id="btnRefresh" class="flex items-center gap-2 px-4 py-2 bg-white border border-gray-200 hover:bg-gray-50 rounded-lg shadow-sm transition-colors text-sm font-medium text-gray-700">
+                    <svg id="refreshIcon" class="w-4 h-4 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path></svg>
+                    Refresh Data
+                </button>
+            </div>
+
+            <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left border-collapse">
+                        <thead>
+                            <tr class="bg-gray-50 border-b border-gray-200">
+                                <th class="py-3 px-4 text-xs font-semibold text-gray-600 uppercase tracking-wider w-12">No</th>
+                                <th class="py-3 px-4 text-xs font-semibold text-gray-600 uppercase tracking-wider">Tanggal</th>
+                                <th class="py-3 px-4 text-xs font-semibold text-gray-600 uppercase tracking-wider w-48">Pengirim</th>
+                                <th class="py-3 px-4 text-xs font-semibold text-gray-600 uppercase tracking-wider">Subjek</th>
+                                <th class="py-3 px-4 text-xs font-semibold text-gray-600 uppercase tracking-wider">Status</th>
+                                <th class="py-3 px-4 text-xs font-semibold text-gray-600 uppercase tracking-wider text-right w-32">Aksi</th>
+                            </tr>
+                        </thead>
+                        <tbody id="tableBody" class="divide-y divide-gray-100">
+                            <!-- Data akan dimuat melalui JavaScript -->
+                        </tbody>
+                    </table>
+                </div>
+                <div id="emptyState" class="hidden p-8 text-center text-gray-500">
+                    <svg class="w-12 h-12 mx-auto text-gray-300 mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4"></path></svg>
+                    <p>Belum ada surat masuk.</p>
+                </div>
+            </div>
+        </div>
+
+    </main>
+
+    <!-- MODAL DETAIL SURAT & BALAS AI (Responsive Fix) -->
+    <div id="modalDetail" class="fixed inset-0 z-50 hidden flex items-center justify-center p-4 sm:p-6">
+        <!-- Backdrop -->
+        <div class="absolute inset-0 bg-gray-900/60 backdrop-blur-sm" onclick="closeModal()"></div>
+        
+        <!-- Modal Content -->
+        <div class="relative w-full max-w-2xl bg-white rounded-2xl shadow-2xl flex flex-col max-h-[90vh] sm:max-h-[85vh] slide-up">
+            
+            <!-- Header Modal (Fixed) -->
+            <div class="flex-shrink-0 flex justify-between items-start p-5 sm:p-6 border-b border-gray-100">
+                <div>
+                    <h3 id="modalSubjek" class="text-xl sm:text-2xl font-bold text-gray-900 pr-4">Subjek Surat</h3>
+                    <div class="flex flex-wrap items-center gap-2 mt-2">
+                        <span id="modalStatusBadge" class="px-2 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">Baru</span>
+                        <span id="modalTanggal" class="text-sm text-gray-500">14 Mei 2026</span>
+                    </div>
+                </div>
+                <button onclick="closeModal()" class="text-gray-400 hover:text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-full p-2 transition-colors flex-shrink-0">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+                </button>
+            </div>
+
+            <!-- Scrollable Body -->
+            <div class="overflow-y-auto p-5 sm:p-6 custom-scrollbar flex-grow">
+                <!-- Info Pengirim -->
+                <div class="mb-5 p-4 bg-gray-50 rounded-xl border border-gray-100">
+                    <p class="text-xs text-gray-500 mb-1 uppercase tracking-wider font-semibold">Dari:</p>
+                    <p id="modalNama" class="font-bold text-gray-800 text-base">Nama Pengirim</p>
+                    <p id="modalEmail" class="text-sm text-indigo-600 font-medium mb-1">email@contoh.com</p>
+                    <div id="modalSosmed" class="flex flex-wrap gap-2 mt-2 hidden"></div>
+                </div>
+
+                <!-- Isi Pesan -->
+                <div class="mb-6">
+                    <p class="text-xs font-semibold text-gray-500 mb-2 uppercase tracking-wider">Isi Surat:</p>
+                    <div id="modalPesan" class="text-gray-700 whitespace-pre-wrap bg-white border border-gray-100 rounded-xl p-4 leading-relaxed text-sm sm:text-base">Isi pesan...</div>
+                </div>
+
+                <!-- Area Lampiran -->
+                <div id="modalFileArea" class="mb-6 hidden">
+                    <p class="text-xs font-semibold text-gray-500 mb-2 uppercase tracking-wider">Dokumen Terlampir:</p>
+                    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-indigo-50/50 p-4 rounded-xl border border-indigo-100">
+                        <div class="flex items-center gap-3 overflow-hidden">
+                            <svg class="w-8 h-8 text-indigo-500 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M4 4a2 2 0 012-2h4.586A2 2 0 0112 2.586L15.414 6A2 2 0 0116 7.414V16a2 2 0 01-2 2H6a2 2 0 01-2-2V4zm2 6a1 1 0 011-1h6a1 1 0 110 2H7a1 1 0 01-1-1zm1 3a1 1 0 100 2h6a1 1 0 100-2H7z" clip-rule="evenodd"></path></svg>
+                            <p id="modalFileName" class="text-sm font-semibold text-gray-800 truncate">dokumen.pdf</p>
+                        </div>
+                        <button id="modalBtnDownload" class="w-full sm:w-auto px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-medium rounded-lg transition-colors flex-shrink-0 shadow-sm flex items-center justify-center gap-2">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg>
+                            Unduh Dokumen
+                        </button>
+                    </div>
+                </div>
+
+                <!-- AI Draft Area -->
+                <div class="border-t border-gray-100 pt-6 mt-4">
+                    <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-3 gap-2">
+                        <h4 class="text-sm font-bold text-purple-700 flex items-center gap-1">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path></svg>
+                            Draft Balasan Cerdas AI
+                        </h4>
+                        <button onclick="buatDraftAI()" class="text-xs font-semibold text-purple-700 hover:text-white bg-purple-100 hover:bg-purple-600 px-3 py-1.5 rounded-lg transition-colors flex items-center gap-1">
+                            <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path></svg>
+                            Buat Ulang Draft
+                        </button>
+                    </div>
+                    <textarea id="modalDraftBalasan" rows="5" class="w-full px-4 py-3 rounded-xl border border-purple-200 bg-purple-50/30 focus:bg-white focus:ring-2 focus:ring-purple-500 focus:border-purple-500 transition-all outline-none resize-y text-sm text-gray-800" placeholder="Klik 'Buat Ulang Draft' untuk membiarkan AI menyusun balasan otomatis berdasarkan isi surat di atas..."></textarea>
+                </div>
+            </div>
+
+            <!-- Footer Modal Actions (Fixed) -->
+            <div class="flex-shrink-0 p-5 sm:p-6 border-t border-gray-100 bg-gray-50 rounded-b-2xl flex flex-col sm:flex-row gap-3">
+                <button id="btnKirimEmail" onclick="kirimBalasanEmail()" class="w-full sm:flex-1 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-2.5 px-4 rounded-xl shadow-md transition-all flex justify-center items-center gap-2">
+                    <span id="btnKirimEmailText">Kirim Langsung ke Email</span>
+                    <div id="btnKirimEmailLoader" class="hidden w-4 h-4 border-2 border-white rounded-full loader"></div>
+                </button>
+                <button onclick="closeModal()" class="w-full sm:w-auto px-6 py-2.5 bg-white border border-gray-300 hover:bg-gray-100 text-gray-700 font-medium rounded-xl transition-colors">Tutup</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Script Logika Frontend -->
+    <script>
+        // State Management
+        let currentFile = null;
+        let activeMailId = null;
+
+        // --- Logika Login Rahasia (Triple Click) ---
+        let secretClickCount = 0;
+        let secretClickTimer;
+
+        function handleSecretClick() {
+            // Hanya aktif jika sedang di halaman public form
+            if (document.getElementById('publicForm').classList.contains('hidden')) return;
+
+            secretClickCount++;
+            clearTimeout(secretClickTimer);
+            
+            // Reset counter setelah 1.5 detik jika tidak diklik 3x berturut-turut
+            secretClickTimer = setTimeout(() => {
+                secretClickCount = 0;
+            }, 1500);
+
+            if (secretClickCount === 3) {
+                // Reset form login ke tampilan awal setiap kali dibuka
+                document.getElementById('formLoginStep1').classList.remove('hidden');
+                document.getElementById('formLoginStep2').classList.add('hidden');
+                document.getElementById('inputUsername').value = '';
+                document.getElementById('inputPassword').value = '';
+                document.getElementById('inputPin').value = '';
+                document.getElementById('errorStep1').classList.add('hidden');
+                document.getElementById('errorStep2').classList.add('hidden');
+
+                showPage('loginForm');
+                secretClickCount = 0; 
+            }
+        }
+
+        // --- Logika Lupa Kredensial ---
+        function lupaKredensial(tipe) {
+            if (tipe === 'password') {
+                showToast('Tautan pemulihan password telah dikirim ke lebarl313@gmail.com', 'success');
+            } else if (tipe === 'pin') {
+                showToast('Instruksi reset PIN keamanan telah dikirim ke perangkat Anda.', 'success');
+            }
+        }
+
+        // Inisialisasi Data Simulasi
+        function getMails() {
+            return JSON.parse(localStorage.getItem('gasSurat')) || [];
+        }
+
+        function saveMails(data) {
+            localStorage.setItem('gasSurat', JSON.stringify(data));
+        }
+
+        function generateId() {
+            return Date.now().toString(36) + Math.random().toString(36).substr(2);
+        }
+
+        function formatDate(dateStr) {
+            const options = { day: 'numeric', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit' };
+            return new Date(dateStr).toLocaleDateString('id-ID', options);
+        }
+
+        // Custom Toast Notification
+        function showToast(message, type = 'success') {
+            const toast = document.createElement('div');
+            const bgClass = type === 'success' ? 'bg-green-600' : (type === 'error' ? 'bg-red-600' : 'bg-gray-800');
+            const icon = type === 'success' 
+                ? '<svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>'
+                : '<svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>';
+            
+            toast.className = `fixed bottom-6 right-6 text-white px-5 py-3 rounded-xl shadow-xl transition-all duration-300 transform translate-y-10 opacity-0 z-[100] flex items-center gap-3 ${bgClass}`;
+            toast.innerHTML = `${icon} <span class="font-medium text-sm">${message}</span>`;
+            
+            document.body.appendChild(toast);
+            
+            requestAnimationFrame(() => {
+                toast.classList.remove('translate-y-10', 'opacity-0');
+            });
+            
+            setTimeout(() => {
+                toast.classList.add('translate-y-10', 'opacity-0');
+                setTimeout(() => toast.remove(), 300);
+            }, 3000);
+        }
+
+        // Navigasi Halaman
+        function showPage(pageId) {
+            document.getElementById('publicForm').classList.add('hidden');
+            document.getElementById('loginForm').classList.add('hidden');
+            document.getElementById('adminDashboard').classList.add('hidden');
+            
+            const target = document.getElementById(pageId);
+            target.classList.remove('hidden');
+            
+            target.classList.remove('slide-up');
+            void target.offsetWidth; 
+            target.classList.add('slide-up');
+
+            if(pageId === 'adminDashboard') {
+                renderAdminTable();
+                document.getElementById('navAdminTitle').classList.remove('hidden');
+                document.getElementById('btnLogout').classList.remove('hidden');
+            } else {
+                document.getElementById('navAdminTitle').classList.add('hidden');
+                document.getElementById('btnLogout').classList.add('hidden');
+            }
+        }
+
+        // --- Fitur Drag & Drop / Upload ---
+        const dropZone = document.getElementById('dropZone');
+        const inputFile = document.getElementById('inputFile');
+        const uploadPlaceholder = document.getElementById('uploadPlaceholder');
+        const filePreview = document.getElementById('filePreview');
+        const fileNameDisplay = document.getElementById('fileNameDisplay');
+        const fileSizeDisplay = document.getElementById('fileSizeDisplay');
+        const fileErrorMsg = document.getElementById('fileErrorMsg');
+
+        ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+            dropZone.addEventListener(eventName, preventDefaults, false);
+        });
+
+        function preventDefaults(e) { e.preventDefault(); e.stopPropagation(); }
+
+        ['dragenter', 'dragover'].forEach(eventName => {
+            dropZone.addEventListener(eventName, () => dropZone.classList.add('drag-active'), false);
+        });
+
+        ['dragleave', 'drop'].forEach(eventName => {
+            dropZone.addEventListener(eventName, () => dropZone.classList.remove('drag-active'), false);
+        });
+
+        dropZone.addEventListener('drop', (e) => {
+            const dt = e.dataTransfer;
+            handleFiles(dt.files);
+        });
+
+        function handleFileSelect(e) { handleFiles(e.target.files); }
+
+        function handleFiles(files) {
+            if (files.length > 0) {
+                const file = files[0];
+                const validTypes = ['application/pdf', 'application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document', 'application/vnd.ms-excel', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', 'text/plain'];
+                
+                if (validTypes.includes(file.type) || file.name.match(/\.(pdf|doc|docx|xls|xlsx|txt)$/i)) {
+                    currentFile = file;
+                    fileErrorMsg.classList.add('hidden');
+                    uploadPlaceholder.classList.add('hidden');
+                    filePreview.classList.remove('hidden');
+                    fileNameDisplay.textContent = file.name;
+                    fileSizeDisplay.textContent = (file.size / 1024).toFixed(1) + ' KB';
+                } else {
+                    fileErrorMsg.classList.remove('hidden');
+                    inputFile.value = ''; 
+                }
+            }
+        }
+
+        function removeFile(e) {
+            e.stopPropagation(); 
+            currentFile = null;
+            inputFile.value = '';
+            uploadPlaceholder.classList.remove('hidden');
+            filePreview.classList.add('hidden');
+        }
+
+        // --- Logika Simulasi AI untuk User ---
+        function rapikanDenganAI() {
+            const pesanInput = document.getElementById('inputPesan');
+            const isiKasar = pesanInput.value.trim();
+            
+            if(!isiKasar) {
+                showToast("Ketik beberapa kata dulu sebelum menggunakan AI!", "error");
+                pesanInput.focus();
+                return;
+            }
+
+            pesanInput.value = "Sedang memproses dengan AI...";
+            pesanInput.disabled = true;
+
+            setTimeout(() => {
+                pesanInput.value = `Dengan hormat,\n\nMelalui surat ini, saya ingin menyampaikan hal terkait: ${isiKasar}.\n\nDemikian surat ini saya sampaikan. Atas perhatian dan kerja samanya, saya ucapkan terima kasih.\n\nHormat saya.`;
+                pesanInput.disabled = false;
+                showToast("Teks berhasil dirapikan dengan AI!");
+            }, 1200);
+        }
+
+        // --- Logika Deteksi Email Canggih (HIBRID) ---
+        let emailTimeout;
+        let isEmailValid = false;
+
+        function debounceEmailCheck() {
+            const emailInput = document.getElementById('inputEmail');
+            const iconContainer = document.getElementById('emailCheckIcon');
+            const helpText = document.getElementById('emailHelpText');
+            const email = emailInput.value.trim();
+
+            // Reset state
+            iconContainer.innerHTML = '';
+            helpText.className = 'text-xs text-gray-500 mt-1 transition-colors duration-300';
+            helpText.textContent = 'Balasan dari admin akan dikirimkan ke email ini.';
+            isEmailValid = false;
+            
+            if (!email) return;
+
+            // Loading state
+            iconContainer.innerHTML = `<div class="w-4 h-4 border-2 border-indigo-500 border-t-transparent rounded-full animate-spin"></div>`;
+            helpText.textContent = 'Memeriksa format domain...';
+            helpText.className = 'text-xs text-indigo-500 mt-1 font-medium transition-colors duration-300';
+
+            clearTimeout(emailTimeout);
+            
+            emailTimeout = setTimeout(() => {
+                // Regex ketat: Harus diakhiri dengan @gmail.com
+                const emailRegex = /^[a-zA-Z0-9._%+-]+@gmail\.com$/i;
+                
+                if(emailRegex.test(email)) {
+                    iconContainer.innerHTML = `<svg class="w-5 h-5 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>`;
+                    helpText.innerHTML = '✓ Format email valid. <span class="font-bold text-gray-700">Pastikan alamat ini benar dan bisa dibuka.</span>';
+                    helpText.className = 'text-xs text-green-600 mt-1 transition-colors duration-300';
+                    isEmailValid = true;
+                } else {
+                    iconContainer.innerHTML = `<svg class="w-5 h-5 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>`;
+                    helpText.textContent = '✗ Wajib menggunakan alamat email Google (@gmail.com)';
+                    helpText.className = 'text-xs text-red-500 mt-1 font-medium transition-colors duration-300';
+                    isEmailValid = false;
+                }
+            }, 600); 
+        }
+
+        // --- Logika Pengiriman Form ---
+        function handleKirimSurat(e) {
+            e.preventDefault();
+            
+            if (!isEmailValid) {
+                showToast('Gagal! Format email tidak valid.', 'error');
+                document.getElementById('inputEmail').focus();
+                return;
+            }
+
+            const btn = document.getElementById('btnSubmit');
+            const btnText = document.getElementById('btnSubmitText');
+            const loader = document.getElementById('btnSubmitLoader');
+
+            btn.disabled = true;
+            btn.classList.replace('bg-indigo-600', 'bg-indigo-400');
+            btnText.textContent = "Mengirim...";
+            loader.classList.remove('hidden');
+
+            const newData = {
+                id: generateId(),
+                tanggal: new Date().toISOString(),
+                nama: document.getElementById('inputNama').value,
+                email: document.getElementById('inputEmail').value,
+                instagram: document.getElementById('inputInstagram').value.trim(),
+                tiktok: document.getElementById('inputTiktok').value.trim(),
+                subjek: document.getElementById('inputSubjek').value,
+                pesan: document.getElementById('inputPesan').value,
+                status: 'Baru',
+                fileName: currentFile ? currentFile.name : null
+            };
+
+            setTimeout(() => {
+                let mails = getMails();
+                mails.unshift(newData); 
+                saveMails(mails);
+
+                btn.disabled = false;
+                btn.classList.replace('bg-indigo-400', 'bg-indigo-600');
+                btnText.textContent = "Kirim Surat Sekarang";
+                loader.classList.add('hidden');
+                
+                document.getElementById('formKirimSurat').reset();
+                document.getElementById('inputInstagram').value = '';
+                document.getElementById('inputTiktok').value = '';
+                removeFile(new Event('click'));
+                
+                document.getElementById('emailCheckIcon').innerHTML = '';
+                document.getElementById('emailHelpText').textContent = 'Balasan dari admin akan dikirimkan ke email ini.';
+                document.getElementById('emailHelpText').className = 'text-xs text-gray-500 mt-1';
+                isEmailValid = false;
+                
+                showToast('Surat berhasil dikirim!', 'success');
+            }, 1500);
+        }
+
+        // --- Logika Login Admin (2-STEP) ---
+        function handleLoginStep1(e) {
+            e.preventDefault();
+            const u = document.getElementById('inputUsername').value;
+            const p = document.getElementById('inputPassword').value;
+            
+            if (u === 'admin' && p === 'admin123') {
+                document.getElementById('errorStep1').classList.add('hidden');
+                
+                // Hide step 1, show step 2
+                document.getElementById('formLoginStep1').classList.add('hidden');
+                document.getElementById('formLoginStep2').classList.remove('hidden');
+                
+                // Focus PIN input
+                setTimeout(() => document.getElementById('inputPin').focus(), 100);
+            } else {
+                document.getElementById('errorStep1').classList.remove('hidden');
+            }
+        }
+
+        function handleLoginStep2(e) {
+            e.preventDefault();
+            const pin = document.getElementById('inputPin').value;
+            
+            if (pin === '1234') {
+                document.getElementById('errorStep2').classList.add('hidden');
+                showPage('adminDashboard');
+                showToast('Berhasil login sebagai Admin', 'success');
+            } else {
+                document.getElementById('errorStep2').classList.remove('hidden');
+            }
+        }
+
+        function backToLoginStep1() {
+            document.getElementById('formLoginStep2').classList.add('hidden');
+            document.getElementById('formLoginStep1').classList.remove('hidden');
+            document.getElementById('errorStep2').classList.add('hidden');
+            document.getElementById('inputPin').value = '';
+        }
+
+        function logoutAdmin() {
+            showPage('publicForm');
+            showToast('Berhasil logout');
+        }
+
+        // --- Logika Dashboard Admin ---
+        function refreshAdminData() {
+            const icon = document.getElementById('refreshIcon');
+            icon.classList.add('animate-spin');
+            
+            setTimeout(() => {
+                renderAdminTable();
+                icon.classList.remove('animate-spin');
+                showToast('Data berhasil diperbarui', 'success');
+            }, 600);
+        }
+
+        function renderAdminTable() {
+            const mails = getMails();
+            const tbody = document.getElementById('tableBody');
+            const emptyState = document.getElementById('emptyState');
+            
+            tbody.innerHTML = '';
+
+            if (mails.length === 0) {
+                emptyState.classList.remove('hidden');
+                tbody.parentElement.classList.add('hidden');
+                return;
+            }
+
+            emptyState.classList.add('hidden');
+            tbody.parentElement.classList.remove('hidden');
+
+            mails.forEach((mail, index) => {
+                const statusColor = mail.status === 'Baru' ? 'bg-yellow-100 text-yellow-800' :
+                                    mail.status === 'Dibaca' ? 'bg-blue-100 text-blue-800' : 
+                                    'bg-green-100 text-green-800';
+                
+                const attachmentIcon = mail.fileName ? `<svg class="w-4 h-4 text-gray-400 inline ml-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13"></path></svg>` : '';
+
+                const tr = document.createElement('tr');
+                tr.className = "hover:bg-gray-50 transition-colors group";
+                tr.innerHTML = `
+                    <td class="py-3 px-4 text-sm text-gray-500">${index + 1}</td>
+                    <td class="py-3 px-4 text-sm text-gray-600">${formatDate(mail.tanggal).split(' ')[0]} ${formatDate(mail.tanggal).split(' ')[1]}</td>
+                    <td class="py-3 px-4">
+                        <div class="text-sm font-medium text-gray-900 truncate max-w-[180px]" title="${mail.nama}">${mail.nama}</div>
+                        <div class="text-xs text-gray-500 truncate max-w-[180px]" title="${mail.email}">${mail.email}</div>
+                    </td>
+                    <td class="py-3 px-4 text-sm text-gray-700">
+                        <span class="truncate block max-w-[200px]" title="${mail.subjek}">${mail.subjek} ${attachmentIcon}</span>
+                    </td>
+                    <td class="py-3 px-4">
+                        <span class="px-2.5 py-1 inline-flex text-xs leading-5 font-semibold rounded-full ${statusColor}">${mail.status}</span>
+                    </td>
+                    <td class="py-3 px-4 text-right">
+                        <div class="flex justify-end gap-2 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity">
+                            <button onclick="openModal('${mail.id}')" title="Buka Detail" class="text-indigo-600 hover:text-indigo-900 bg-indigo-50 hover:bg-indigo-100 p-1.5 rounded-md">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path></svg>
+                            </button>
+                            ${mail.status === 'Baru' ? `
+                            <button onclick="markAsRead('${mail.id}')" title="Tandai Dibaca" class="text-blue-600 hover:text-blue-900 bg-blue-50 hover:bg-blue-100 p-1.5 rounded-md">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>
+                            </button>` : ''}
+                            <button onclick="deleteMail('${mail.id}')" title="Hapus" class="text-red-600 hover:text-red-900 bg-red-50 hover:bg-red-100 p-1.5 rounded-md">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
+                            </button>
+                        </div>
+                    </td>
+                `;
+                tbody.appendChild(tr);
+            });
+        }
+
+        function markAsRead(id) {
+            let mails = getMails();
+            const index = mails.findIndex(m => m.id === id);
+            if (index !== -1) {
+                mails[index].status = 'Dibaca';
+                saveMails(mails);
+                renderAdminTable();
+            }
+        }
+
+        function deleteMail(id) {
+            if(confirm('Yakin ingin menghapus surat ini?')) {
+                let mails = getMails();
+                mails = mails.filter(m => m.id !== id);
+                saveMails(mails);
+                renderAdminTable();
+                showToast('Surat dihapus', 'error');
+            }
+        }
+
+        function downloadSimulatedFile(filename) {
+            const content = `[DOKUMEN SIMULASI - RONZZ_SURAT]\n\nNama Dokumen Asli: ${filename}\n\nCatatan Sistem:\nIni adalah file simulasi yang di-generate oleh frontend browser.\nDalam versi produksi (menggunakan Google Apps Script), tombol unduh ini akan mengarahkan Anda untuk mendownload file asli langsung dari Google Drive pengirim.\n\nTerima kasih.`;
+            const blob = new Blob([content], { type: 'text/plain;charset=utf-8' });
+            const url = URL.createObjectURL(blob);
+            
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = (filename || 'dokumen_terlampir') + '_simulasi.txt';
+            document.body.appendChild(a);
+            a.click();
+            
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+            showToast(`Mengunduh: ${filename}`, 'success');
+        }
+
+        // --- Logika Modal & Draft Balasan AI ---
+        function openModal(id) {
+            activeMailId = id;
+            const mails = getMails();
+            const mail = mails.find(m => m.id === id);
+            
+            if(!mail) return;
+
+            if(mail.status === 'Baru') {
+                mail.status = 'Dibaca';
+                saveMails(mails);
+                renderAdminTable();
+            }
+
+            document.getElementById('modalSubjek').textContent = mail.subjek;
+            document.getElementById('modalTanggal').textContent = formatDate(mail.tanggal);
+            document.getElementById('modalNama').textContent = mail.nama;
+            document.getElementById('modalEmail').textContent = mail.email;
+            
+            const sosmedContainer = document.getElementById('modalSosmed');
+            sosmedContainer.innerHTML = '';
+            let hasSosmed = false;
+            
+            if(mail.instagram) {
+                // Menghilangkan '@' jika user terlanjur mengetiknya agar URL valid
+                const igUser = mail.instagram.replace('@', '');
+                sosmedContainer.innerHTML += `<a href="https://instagram.com/${igUser}" target="_blank" title="Buka Instagram" class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-medium bg-pink-50 text-pink-700 border border-pink-100 hover:bg-pink-100 transition-colors cursor-pointer"><svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zM12 0C8.741 0 8.333.014 7.053.072 2.695.272.273 2.69.073 7.052.014 8.333 0 8.741 0 12c0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98C8.333 23.986 8.741 24 12 24c3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98C15.668.014 15.259 0 12 0zm0 5.838a6.162 6.162 0 100 12.324 6.162 6.162 0 000-12.324zM12 16a4 4 0 110-8 4 4 0 010 8zm6.406-11.845a1.44 1.44 0 100 2.881 1.44 1.44 0 000-2.881z"/></svg> @${igUser}</a>`;
+                hasSosmed = true;
+            }
+            if(mail.tiktok) {
+                const ttUser = mail.tiktok.replace('@', '');
+                sosmedContainer.innerHTML += `<a href="https://tiktok.com/@${ttUser}" target="_blank" title="Buka TikTok" class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-medium bg-black text-white border border-gray-800 hover:bg-gray-800 transition-colors cursor-pointer"><svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="currentColor"><path d="M19.59 6.69a4.83 4.83 0 01-3.77-4.25V2h-3.45v13.67a2.89 2.89 0 01-5.2 1.74 2.89 2.89 0 012.31-4.64 2.93 2.93 0 01.88.13V9.4a6.84 6.84 0 00-1-.05A6.33 6.33 0 005 15.68a6.34 6.34 0 006.27 6.32 6.32 6.32 0 006.27-6.32V10.5a8.4 8.4 0 005.15 1.67V8.72a4.93 4.93 0 01-3.1-2.03z"/></svg> @${ttUser}</a>`;
+                hasSosmed = true;
+            }
+            
+            if(hasSosmed) sosmedContainer.classList.remove('hidden');
+            else sosmedContainer.classList.add('hidden');
+
+            document.getElementById('modalPesan').textContent = mail.pesan;
+            document.getElementById('modalDraftBalasan').value = ''; 
+
+            const badge = document.getElementById('modalStatusBadge');
+            badge.textContent = mail.status;
+            badge.className = `px-2 py-0.5 rounded-full text-xs font-medium ${
+                mail.status === 'Dibalas' ? 'bg-green-100 text-green-800' : 'bg-blue-100 text-blue-800'
+            }`;
+
+            const fileArea = document.getElementById('modalFileArea');
+            if (mail.fileName) {
+                fileArea.classList.remove('hidden');
+                document.getElementById('modalFileName').textContent = mail.fileName;
+                document.getElementById('modalBtnDownload').onclick = () => downloadSimulatedFile(mail.fileName);
+            } else {
+                fileArea.classList.add('hidden');
+            }
+
+            const modal = document.getElementById('modalDetail');
+            modal.classList.remove('hidden');
+            
+            const modalContent = modal.querySelector('.slide-up');
+            modalContent.style.animation = 'none';
+            void modalContent.offsetWidth;
+            modalContent.style.animation = null;
+        }
+
+        function closeModal() {
+            document.getElementById('modalDetail').classList.add('hidden');
+            activeMailId = null;
+        }
+
+        function buatDraftAI() {
+            const textArea = document.getElementById('modalDraftBalasan');
+            const nama = document.getElementById('modalNama').textContent;
+            const subjek = document.getElementById('modalSubjek').textContent;
+
+            textArea.value = "AI Sedang menyusun draft balasan...";
+            textArea.disabled = true;
+
+            setTimeout(() => {
+                textArea.value = `Yth. Sdr/i ${nama},\n\nTerima kasih telah menghubungi kami. Kami telah menerima surat/dokumen Anda terkait dengan "${subjek}" dan sedang dalam peninjauan oleh tim kami. Kami akan segera menyampaikan perkembangannya kepada Anda untuk diproses lebih lanjut.\n\nHormat kami,\nTim Admin RonzzSurat`;
+                textArea.disabled = false;
+                showToast("Draft AI berhasil dibuat!", "success");
+            }, 1200);
+        }
+
+        function kirimBalasanEmail() {
+            const textArea = document.getElementById('modalDraftBalasan');
+            const isiBalasan = textArea.value.trim();
+            const emailPengirim = document.getElementById('modalEmail').textContent;
+
+            if(!isiBalasan) {
+                showToast("Buat atau tulis draft balasan terlebih dahulu!", "error");
+                textArea.focus();
+                return;
+            }
+
+            const btn = document.getElementById('btnKirimEmail');
+            const btnText = document.getElementById('btnKirimEmailText');
+            const loader = document.getElementById('btnKirimEmailLoader');
+
+            btn.disabled = true;
+            btnText.textContent = "Mengirim Email...";
+            loader.classList.remove('hidden');
+
+            setTimeout(() => {
+                if(activeMailId) {
+                    let mails = getMails();
+                    const index = mails.findIndex(m => m.id === activeMailId);
+                    if(index !== -1) {
+                        mails[index].status = 'Dibalas';
+                        saveMails(mails);
+                        renderAdminTable();
+                    }
+                }
+
+                btn.disabled = false;
+                btnText.textContent = "Kirim Langsung ke Email";
+                loader.classList.add('hidden');
+                
+                closeModal();
+                showToast(`Email balasan terkirim ke ${emailPengirim}`, 'success');
+            }, 1800);
+        }
+    </script>
+</body>
+</html>
